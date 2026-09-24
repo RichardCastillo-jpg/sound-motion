@@ -95,8 +95,10 @@ with PoseLandmarker.create_from_options(options) as landmarker, HandLandmarker.c
         
         height, width = frame.shape[:2]
 
-        if last_result != None is not last_result.pose_landmarks:
-            landmarks = last_result.pose_landmarks[0]
+        pose_result = last_result
+
+        if pose_result is not None and pose_result.pose_landmarks:
+            landmarks = pose_result.pose_landmarks[0]
             for i in UPPER_BODY_LANDMARKS: 
                 point = landmarks[i]
                 if point.visibility >= UMBRAL: 
