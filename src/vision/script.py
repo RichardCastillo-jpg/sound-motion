@@ -44,7 +44,7 @@ HAND_LANDMARKS_NAMES = {
     19: "menique_articulacion2",
     20: "menique_punta",
 }
-UMBRAL = 0.3
+VISIBILITY_THRESHOLD = 0.7
 last_result = None
 last_hand_result = None
 
@@ -101,7 +101,7 @@ with PoseLandmarker.create_from_options(options) as landmarker, HandLandmarker.c
             landmarks = pose_result.pose_landmarks[0]
             for i in UPPER_BODY_LANDMARKS: 
                 point = landmarks[i]
-                if point.visibility >= UMBRAL: 
+                if point.visibility >= VISIBILITY_THRESHOLD: 
                     x_px = int(point.x*width)
                     y_px = int(point.y*height)
                     cv2.circle(frame, (x_px, y_px), 5, (255, 0, 0), -1) #cv2.circle(frame, (x_px, y_px), radio, color, grosor)
