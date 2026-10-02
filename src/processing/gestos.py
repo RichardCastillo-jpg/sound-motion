@@ -1,4 +1,4 @@
-from landmark import Landmark
+from src.processing.landmark import Landmark
 import math
  
 FACTOR_EXTENSION = 1.4
