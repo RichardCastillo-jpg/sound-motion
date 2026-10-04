@@ -264,14 +264,8 @@ with PoseLandmarker.create_from_options(options) as landmarker, HandLandmarker.c
         # GESTOS
         # ---------------------------
 
-        gesto_left = "ninguno"
-        gesto_right = "ninguno"
-
-        if landmarks_left:
-            gesto_left = seleccionar_gesto(landmarks_left)
-
-        if landmarks_right:
-            gesto_right = seleccionar_gesto(landmarks_right)
+        gesto_left = detectar_gesto(landmarks_left, "Left")
+        gesto_right = detectar_gesto(landmarks_right, "Right")
 
         # ---------------------------
         # MOSTRAR CAMARA

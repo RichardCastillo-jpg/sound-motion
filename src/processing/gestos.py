@@ -2,7 +2,7 @@ from src.processing.landmark import Landmark
 import math
  
 FACTOR_EXTENSION = 1.4
-ultimo_gesto = None
+ultimo_gesto = {}
  
 def calcular_distancia(punto1, punto2):
     dx = punto2.x - punto1.x
@@ -91,13 +91,13 @@ def seleccionar_gesto(landmarks):
  
     return "ninguno"
  
-def detectar_gesto(landmarks):
+def detectar_gesto(landmarks, mano):
     gesto = seleccionar_gesto(landmarks)
     global ultimo_gesto
-    if (gesto == ultimo_gesto):
+    if (gesto == ultimo_gesto.get(mano)):
         return None
     else:
-        ultimo_gesto = gesto
+        ultimo_gesto[mano] = gesto
         return gesto
  
 
