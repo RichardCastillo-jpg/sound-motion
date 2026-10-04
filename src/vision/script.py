@@ -8,8 +8,9 @@ from src.processing.movimiento import ProcesadorMovimiento
 
 osc_client = udp_client.SimpleUDPClient("127.0.0.1", 9000)
 
-model_path = 'pose_landmarker_full.task'
-hand_model_path = 'hand_landmarker.task'
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(SCRIPT_DIR, 'pose_landmarker_full.task')
+hand_model_path = os.path.join(SCRIPT_DIR, 'hand_landmarker.task')
 
 UPPER_BODY_LANDMARKS = [11, 12, 13, 14, 15, 16, 23, 24]
 
