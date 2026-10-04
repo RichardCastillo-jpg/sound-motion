@@ -1,9 +1,10 @@
 import mediapipe as mp
 import cv2
 import time
+import os
 from pythonosc import udp_client
 from src.integration.vision_processing import crear_landmarks_pose, crear_landmarks_hand
-from src.processing.gestos import seleccionar_gesto
+from src.processing.gestos import detectar_gesto
 from src.processing.movimiento import ProcesadorMovimiento
 
 osc_client = udp_client.SimpleUDPClient("127.0.0.1", 9000)
@@ -60,6 +61,8 @@ procesador_movimiento = ProcesadorMovimiento()
 posicion_anterior_muneca_derecha = None
 tiempo_anterior_muneca_derecha = None
 ultimo_timestamp_hand_procesado = None
+gesto_left_actual = "ninguno"
+gesto_right_actual = "ninguno"
 
 BaseOptions = mp.tasks.BaseOptions
 PoseLandmarker = mp.tasks.vision.PoseLandmarker
@@ -87,9 +90,9 @@ def on_hands_result(
     last_hand_timestamp_ms = timestamp_ms
 
 options = PoseLandmarkerOptions(
-    base_options=BaseOptions(model_asset_path=model_path),
-    running_mode=VisionRunningMode.LIVE_STREAM,
-    result_callback=on_pose_result)
+        base_options=BaseOptions(model_asset_path=model_path),
+        running_mode=VisionRunningMode.LIVE_STREAM,
+        result_callback=on_pose_result)
 
 hand_options = HandLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=hand_model_path),
