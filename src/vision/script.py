@@ -2,6 +2,8 @@ import mediapipe as mp
 import cv2
 import time
 from pythonosc import udp_client
+from src.integration.vision_processing import crear_landmarks_pose, crear_landmarks_hand
+from src.processing.gestos import seleccionar_gesto
 
 osc_client = udp_client.SimpleUDPClient("127.0.0.1", 9000)
 
@@ -95,30 +97,85 @@ with PoseLandmarker.create_from_options(options) as landmarker, HandLandmarker.c
         
         height, width = frame.shape[:2]
 
+        # ---------------------------
+        # POSE
+        # ---------------------------
+
         pose_result = last_result
 
         if pose_result is not None and pose_result.pose_landmarks:
             landmarks = pose_result.pose_landmarks[0]
+            datos_pose = []
+            
             for i in UPPER_BODY_LANDMARKS: 
                 point = landmarks[i]
+
                 if point.visibility >= VISIBILITY_THRESHOLD: 
                     x_px = int(point.x*width)
                     y_px = int(point.y*height)
+                    
                     cv2.circle(frame, (x_px, y_px), 5, (255, 0, 0), -1) #cv2.circle(frame, (x_px, y_px), radio, color, grosor)
 
-                    osc_client.send_message("/pose/"+LANDMARKS_NAMES[i], [point.x, point.y, point.z])
+                    osc_client.send_message("/pose/" + LANDMARKS_NAMES[i], [point.x, point.y, point.z])
+                    datos_pose.append({
+                        "nombre": LANDMARKS_NAMES[i],
+                        "indice": i,
+                        "x": point.x,
+                        "y": point.y,
+                        "z": point.z,
+                        "visibilidad": point.visibility
+                    })
 
+            landmarks_pose = crear_landmarks_pose(datos_pose)
+
+
+        # ---------------------------
+        # HANDS
+        # ---------------------------
+
+        landmarks_left = []
+        landmarks_right = []
 
         if last_hand_result is not None:
             for hand, hand_info in zip(last_hand_result.hand_landmarks, last_hand_result.handedness): 
+                lateralidad = hand_info[0].category_name 
+                datos_hand = []  
+
                 for i, point in enumerate(hand):
                     x_px = int(point.x*width)
                     y_px = int(point.y*height)
+
                     cv2.circle(frame, (x_px, y_px), 5, (0, 0, 255), -1) 
 
-                    osc_client.send_message(f"/hand/{hand_info[0].category_name}/{HAND_LANDMARKS_NAMES[i]}", [point.x, point.y, point.z])
+                    osc_client.send_message(f"/hand/{lateralidad}/{HAND_LANDMARKS_NAMES[i]}", [point.x, point.y, point.z])
+                    datos_hand.append({
+                        "nombre": HAND_LANDMARKS_NAMES[i],
+                        "indice": i,
+                        "x": point.x,
+                        "y": point.y,
+                        "z": point.z,
+                        "lateralidad": lateralidad
+                    })
 
+                landmarks_hand = crear_landmarks_hand(datos_hand)
+                if lateralidad == "Left":
+                    landmarks_left = landmarks_hand
+                elif lateralidad == "Right":
+                    landmarks_right = landmarks_hand
 
+        gesto_left = "ninguno"
+        gesto_right = "ninguno"
+
+        if landmarks_left:
+            gesto_left = seleccionar_gesto(landmarks_left)
+
+        if landmarks_right:
+            gesto_right = seleccionar_gesto(landmarks_right)
+
+        # ---------------------------
+        # MOSTRAR CAMARA
+        # ---------------------------
+                    
         cv2.imshow("Mi camara", frame)
 
         if cv2.waitKey(1) & 0xFF == 27:
