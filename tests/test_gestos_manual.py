@@ -26,11 +26,11 @@ import sys
 
 sys.path.insert(
     0,
-    os.path.join(os.path.dirname(__file__), "..", "src", "processing"),
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..")),
 )
 
-from landmark import Landmark
-import gestos
+from src.processing.landmark import Landmark
+from src.processing import gestos
 
 
 # --- Geometria sintetica de una mano -----------------------------------
