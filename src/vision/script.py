@@ -267,9 +267,21 @@ with PoseLandmarker.create_from_options(options) as landmarker, HandLandmarker.c
         gesto_left = detectar_gesto(landmarks_left, "Left")
         gesto_right = detectar_gesto(landmarks_right, "Right")
 
+        if gesto_left is not None:
+            gesto_left_actual = gesto_left
+        if gesto_right is not None:
+            gesto_right_actual = gesto_right
+
+
         # ---------------------------
         # MOSTRAR CAMARA
         # ---------------------------
+
+        cv2.putText(frame, f"Left: {gesto_left_actual}", (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
+        cv2.putText(frame, f"Right: {gesto_right_actual}", (10, 60),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+
 
         cv2.imshow("Mi camara", frame)
 
