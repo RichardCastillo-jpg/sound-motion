@@ -4,6 +4,7 @@ import time
 from pythonosc import udp_client
 from src.integration.vision_processing import crear_landmarks_pose, crear_landmarks_hand
 from src.processing.gestos import seleccionar_gesto
+from src.processing.movimiento import ProcesadorMovimiento
 
 osc_client = udp_client.SimpleUDPClient("127.0.0.1", 9000)
 
@@ -46,9 +47,18 @@ HAND_LANDMARKS_NAMES = {
     19: "menique_dip",
     20: "menique_punta",
 }
+
+MAX_DESPLAZAMIENTO_MUNECA = 0.20
 VISIBILITY_THRESHOLD = 0.7
+last_hand_timestamp_ms = None
 last_result = None
 last_hand_result = None
+
+procesador_movimiento = ProcesadorMovimiento()
+
+posicion_anterior_muneca_derecha = None
+tiempo_anterior_muneca_derecha = None
+ultimo_timestamp_hand_procesado = None
 
 BaseOptions = mp.tasks.BaseOptions
 PoseLandmarker = mp.tasks.vision.PoseLandmarker
@@ -64,9 +74,16 @@ def on_pose_result(result: PoseLandmarkerResult, output_image: mp.Image, timesta
     global last_result 
     last_result = result
 
-def on_hands_result (result: HandLandmarkerResult, output_image: mp.Image, timestamp_ms: int):
-    global last_hand_result
+def on_hands_result(
+    result: HandLandmarkerResult,
+    output_image: mp.Image,
+    timestamp_ms: int
+):
+
+    global last_hand_result, last_hand_timestamp_ms
+
     last_hand_result = result
+    last_hand_timestamp_ms = timestamp_ms
 
 options = PoseLandmarkerOptions(
     base_options=BaseOptions(model_asset_path=model_path),
@@ -80,9 +97,10 @@ hand_options = HandLandmarkerOptions(
         result_callback=on_hands_result)
 
 with PoseLandmarker.create_from_options(options) as landmarker, HandLandmarker.create_from_options(hand_options) as handLandmarker:
-    cap = cv2.VideoCapture(0) #Primera camara que encuentre
+    cap = cv2.VideoCapture(0)  # Primera camara que encuentre
 
     while True:
+
         ok, frame = cap.read()
 
         if not ok:
@@ -133,11 +151,17 @@ with PoseLandmarker.create_from_options(options) as landmarker, HandLandmarker.c
         # HANDS
         # ---------------------------
 
+        hand_result = last_hand_result
+        hand_timestamp_ms = last_hand_timestamp_ms
+
         landmarks_left = []
         landmarks_right = []
 
-        if last_hand_result is not None:
-            for hand, hand_info in zip(last_hand_result.hand_landmarks, last_hand_result.handedness): 
+        if hand_result is not None:
+            for hand, hand_info in zip(
+                hand_result.hand_landmarks,
+                hand_result.handedness
+            ):
                 lateralidad = hand_info[0].category_name 
                 datos_hand = []  
 
@@ -163,6 +187,83 @@ with PoseLandmarker.create_from_options(options) as landmarker, HandLandmarker.c
                 elif lateralidad == "Right":
                     landmarks_right = landmarks_hand
 
+        # ---------------------------
+        # MOVIMIENTO MANO DERECHA
+        # ---------------------------
+
+        if not landmarks_right:
+            posicion_anterior_muneca_derecha = None
+            tiempo_anterior_muneca_derecha = None
+
+        elif (
+            hand_timestamp_ms is not None
+            and hand_timestamp_ms != ultimo_timestamp_hand_procesado
+        ):
+
+            muneca_derecha = None
+
+            for landmark in landmarks_right:
+                if landmark.nombre == "mano_muñeca":
+                    muneca_derecha = landmark
+                    break
+
+            if muneca_derecha is not None:
+                if not (
+                    0 <= muneca_derecha.x <= 1
+                    and 0 <= muneca_derecha.y <= 1
+                ):
+                    posicion_anterior_muneca_derecha = None
+                    tiempo_anterior_muneca_derecha = None
+
+                else:
+                    posicion_actual = (
+                        muneca_derecha.x,
+                        muneca_derecha.y
+                    )
+
+                    tiempo_actual = hand_timestamp_ms / 1000.0
+
+                    if (
+                        posicion_anterior_muneca_derecha is not None
+                        and tiempo_anterior_muneca_derecha is not None
+                    ):
+                        desplazamiento = procesador_movimiento.calcular_desplazamiento(
+                            posicion_anterior_muneca_derecha,
+                            posicion_actual
+                        )
+
+                        dx, dy = desplazamiento
+
+                        if (abs(dx) > MAX_DESPLAZAMIENTO_MUNECA or abs(dy) > MAX_DESPLAZAMIENTO_MUNECA):
+                            posicion_anterior_muneca_derecha = None
+                            tiempo_anterior_muneca_derecha = None
+                        else:
+                            tiempo_transcurrido = (
+                                tiempo_actual
+                                - tiempo_anterior_muneca_derecha
+                            )
+
+                            velocidad = procesador_movimiento.calcular_velocidad(
+                                desplazamiento,
+                                tiempo_transcurrido
+                            )
+
+                            direccion = procesador_movimiento.determinar_direccion(
+                                desplazamiento
+                            )
+                            posicion_anterior_muneca_derecha = posicion_actual
+                            tiempo_anterior_muneca_derecha = tiempo_actual
+
+                    else:
+                        posicion_anterior_muneca_derecha = posicion_actual
+                        tiempo_anterior_muneca_derecha = tiempo_actual
+
+            ultimo_timestamp_hand_procesado = hand_timestamp_ms
+
+        # ---------------------------
+        # GESTOS
+        # ---------------------------
+
         gesto_left = "ninguno"
         gesto_right = "ninguno"
 
@@ -175,11 +276,10 @@ with PoseLandmarker.create_from_options(options) as landmarker, HandLandmarker.c
         # ---------------------------
         # MOSTRAR CAMARA
         # ---------------------------
-                    
+
         cv2.imshow("Mi camara", frame)
 
         if cv2.waitKey(1) & 0xFF == 27:
             break
-
     cap.release()
     cv2.destroyAllWindows()
