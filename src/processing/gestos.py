@@ -1,13 +1,16 @@
 from src.processing.landmark import Landmark
 import math
  
-FACTOR_EXTENSION = 1.4
+FACTOR_EXTENSION = 1.6
+FACTOR_CERRADO = 0.95
+FACTOR_PULGAR_ANULAR = 0.9
 ultimo_gesto = {}
  
 def calcular_distancia(punto1, punto2):
     dx = punto2.x - punto1.x
     dy = punto2.y - punto1.y
-    return math.sqrt(dx**2 + dy**2)
+    dz = punto2.z - punto1.z
+    return math.sqrt(dx**2 + dy**2 + dz**2)
  
 def clasificar_landmarks(landmarks):
     puntas = {}
@@ -46,46 +49,30 @@ def puno_cerrado(landmarks):
  
     if mano_muneca is None:
         return False
- 
+
+    if "pulgar" not in puntas or "anular" not in puntas:
+        return False
+
     for dedo, punta in puntas.items():
         if dedo not in mcps:
             return False
         mcp = mcps[dedo]
-        if calcular_distancia(mano_muneca, punta) > FACTOR_EXTENSION * calcular_distancia(mano_muneca, mcp):
-            return False
- 
-    return True
- 
-def pulgar_arriba(landmarks):
-    puntas, mcps, mano_muneca = clasificar_landmarks(landmarks)
- 
-    if mano_muneca is None:
-        return False
- 
-    if "pulgar" not in mcps or "pulgar" not in puntas:
-        return False
-    
-    for dedo, punta in puntas.items():
-        if dedo not in mcps:
-            return False
-        mcp = mcps[dedo]
-        if (calcular_distancia(mano_muneca, punta) > FACTOR_EXTENSION * calcular_distancia(mano_muneca, mcp)
+        if (calcular_distancia(mano_muneca, punta) > FACTOR_CERRADO * calcular_distancia(mano_muneca, mcp)
             and dedo != "pulgar"):
             return False
- 
-    dx = puntas["pulgar"].x - mcps["pulgar"].x
-    dy = puntas["pulgar"].y - mcps["pulgar"].y
- 
-    if abs(dy) < abs(dx) or dy >= 0:
+
+    referencia = calcular_distancia(mano_muneca, mcps["medio"])
+    dist_pulgar_anular = calcular_distancia(puntas["pulgar"], puntas["anular"])
+
+    if dist_pulgar_anular > FACTOR_PULGAR_ANULAR * referencia:
         return False
- 
+
     return True
+ 
     
 def seleccionar_gesto(landmarks):
     if mano_extendida(landmarks):
         return "mano_extendida"
-    if pulgar_arriba(landmarks): 
-        return "pulgar_arriba"
     if puno_cerrado(landmarks):
         return "puño_cerrado" 
  
