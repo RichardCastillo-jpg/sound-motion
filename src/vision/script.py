@@ -55,6 +55,7 @@ VISIBILITY_THRESHOLD = 0.7
 last_hand_timestamp_ms = None
 last_result = None
 last_hand_result = None
+last_timestamp_ms = 0
 
 procesador_movimiento = ProcesadorMovimiento()
 
@@ -112,7 +113,12 @@ with PoseLandmarker.create_from_options(options) as landmarker, HandLandmarker.c
         
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)   #convertir BGR -> RGB
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)  #envolverlo
-        timestamp_ms = int(time.time()*1000)
+        
+        now = int(time.time() * 1000)
+        if now <= last_timestamp_ms:
+            now = last_timestamp_ms + 1
+        last_timestamp_ms = now
+        timestamp_ms = now
 
         landmarker.detect_async(mp_image, timestamp_ms)
         handLandmarker.detect_async(mp_image, timestamp_ms)
