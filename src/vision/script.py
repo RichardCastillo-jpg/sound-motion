@@ -1,15 +1,17 @@
 import mediapipe as mp
 import cv2
 import time
+import os
 from pythonosc import udp_client
 from src.integration.vision_processing import crear_landmarks_pose, crear_landmarks_hand
-from src.processing.gestos import seleccionar_gesto
+from src.processing.gestos import detectar_gesto
 from src.processing.movimiento import ProcesadorMovimiento
 
 osc_client = udp_client.SimpleUDPClient("127.0.0.1", 9000)
 
-model_path = 'pose_landmarker_full.task'
-hand_model_path = 'hand_landmarker.task'
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+model_path = os.path.join(SCRIPT_DIR, 'pose_landmarker_full.task')
+hand_model_path = os.path.join(SCRIPT_DIR, 'hand_landmarker.task')
 
 UPPER_BODY_LANDMARKS = [11, 12, 13, 14, 15, 16, 23, 24]
 
@@ -53,12 +55,15 @@ VISIBILITY_THRESHOLD = 0.7
 last_hand_timestamp_ms = None
 last_result = None
 last_hand_result = None
+last_timestamp_ms = 0
 
 procesador_movimiento = ProcesadorMovimiento()
 
 posicion_anterior_muneca_derecha = None
 tiempo_anterior_muneca_derecha = None
 ultimo_timestamp_hand_procesado = None
+gesto_left_actual = "ninguno"
+gesto_right_actual = "ninguno"
 
 BaseOptions = mp.tasks.BaseOptions
 PoseLandmarker = mp.tasks.vision.PoseLandmarker
@@ -86,9 +91,9 @@ def on_hands_result(
     last_hand_timestamp_ms = timestamp_ms
 
 options = PoseLandmarkerOptions(
-    base_options=BaseOptions(model_asset_path=model_path),
-    running_mode=VisionRunningMode.LIVE_STREAM,
-    result_callback=on_pose_result)
+        base_options=BaseOptions(model_asset_path=model_path),
+        running_mode=VisionRunningMode.LIVE_STREAM,
+        result_callback=on_pose_result)
 
 hand_options = HandLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=hand_model_path),
@@ -108,7 +113,12 @@ with PoseLandmarker.create_from_options(options) as landmarker, HandLandmarker.c
         
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)   #convertir BGR -> RGB
         mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb_frame)  #envolverlo
-        timestamp_ms = int(time.time()*1000)
+        
+        now = int(time.time() * 1000)
+        if now <= last_timestamp_ms:
+            now = last_timestamp_ms + 1
+        last_timestamp_ms = now
+        timestamp_ms = now
 
         landmarker.detect_async(mp_image, timestamp_ms)
         handLandmarker.detect_async(mp_image, timestamp_ms)
@@ -264,18 +274,24 @@ with PoseLandmarker.create_from_options(options) as landmarker, HandLandmarker.c
         # GESTOS
         # ---------------------------
 
-        gesto_left = "ninguno"
-        gesto_right = "ninguno"
+        gesto_left = detectar_gesto(landmarks_left, "Left")
+        gesto_right = detectar_gesto(landmarks_right, "Right")
 
-        if landmarks_left:
-            gesto_left = seleccionar_gesto(landmarks_left)
+        if gesto_left is not None:
+            gesto_left_actual = gesto_left
+        if gesto_right is not None:
+            gesto_right_actual = gesto_right
 
-        if landmarks_right:
-            gesto_right = seleccionar_gesto(landmarks_right)
 
         # ---------------------------
         # MOSTRAR CAMARA
         # ---------------------------
+
+        cv2.putText(frame, f"Left: {gesto_left_actual}", (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
+        cv2.putText(frame, f"Right: {gesto_right_actual}", (10, 60),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+
 
         cv2.imshow("Mi camara", frame)
 
