@@ -29,21 +29,6 @@ def clasificar_landmarks(landmarks):
  
     return puntas, mcps, mano_muneca
  
-def mano_extendida(landmarks):
-    puntas, mcps, mano_muneca = clasificar_landmarks(landmarks)
- 
-    if mano_muneca is None:
-        return False
- 
-    for dedo, punta in puntas.items():
-        if dedo not in mcps:
-            return False 
-        mcp = mcps[dedo]
-        if calcular_distancia(mano_muneca, punta) < FACTOR_EXTENSION * calcular_distancia(mano_muneca, mcp):
-            return False
- 
-    return True
- 
 def puno_cerrado(landmarks):
     puntas, mcps, mano_muneca = clasificar_landmarks(landmarks)
  
@@ -68,13 +53,63 @@ def puno_cerrado(landmarks):
         return False
 
     return True
- 
+
+def configuracion_dedos(landmarks, dedos_arriba):
+    puntas, mcps, mano_muneca = clasificar_landmarks(landmarks)
+
+    if mano_muneca is None:
+        return False
+
+    for dedo_arr in dedos_arriba:
+        if dedo_arr not in mcps or dedo_arr not in puntas:
+            return False
+
+    for dedo, punta in puntas.items():
+        mcp = mcps[dedo]
+        if (dedo in dedos_arriba and calcular_distancia(mano_muneca, punta) < 
+            FACTOR_EXTENSION * calcular_distancia(mano_muneca, mcp)):
+            return False
+
+        if (dedo not in dedos_arriba and calcular_distancia(mano_muneca, punta) > 
+            FACTOR_CERRADO * calcular_distancia(mano_muneca, mcp) and dedo!="pulgar"): #No se tiene en cuenta pulgar
+            return False 
+
+    return True
+
+def indice_extendido(landmarks):
+    return configuracion_dedos(landmarks, ["indice"])
+
+def indice_medio_extendido(landmarks):
+    return configuracion_dedos(landmarks, ["indice", "medio"])
+
+def indice_medio_anular_extendido(landmarks):
+    return configuracion_dedos(landmarks, ["indice", "medio", "anular"])
+
+def indice_medio_anular_menique_extendido(landmarks):
+    return configuracion_dedos(landmarks, ["indice", "medio", "anular", "menique"])
+
+def indice_menique_extendido(landmarks):
+    return configuracion_dedos(landmarks, ["indice", "menique"])
+
+def mano_extendida(landmarks):
+    return configuracion_dedos(landmarks, ["indice", "medio", "anular", "menique", "pulgar"])
     
+
 def seleccionar_gesto(landmarks):
     if mano_extendida(landmarks):
         return "mano_extendida"
     if puno_cerrado(landmarks):
-        return "puño_cerrado" 
+        return "puño_cerrado"
+    if indice_extendido (landmarks):
+        return ("indice")
+    if indice_medio_extendido(landmarks):
+        return ("indice_medio")
+    if indice_medio_anular_extendido(landmarks):
+        return ("indice_medio_anular")
+    if indice_medio_anular_menique_extendido(landmarks):
+        return ("indice_medio_anular_menique")
+    if indice_menique_extendido(landmarks):
+        return ("indice_menique")
  
     return "ninguno"
  
