@@ -296,6 +296,7 @@ with PoseLandmarker.create_from_options(options) as landmarker, HandLandmarker.c
         # ACORDES
         # ---------------------------
 
+        gestos_actuales = {"Left": gesto_left_actual, "Right": gesto_right_actual}
         manos_visibles = {"Left": bool(landmarks_left), "Right": bool(landmarks_right)}
 
         if control_acordes.actualizar(

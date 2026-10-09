@@ -168,8 +168,6 @@ def test_ausencia_sostenida_si_cambia_el_acorde():
     for _ in range(10):
         control.actualizar("indice", "mano_extendida", False)
     assert control.obtener_acorde() == "C"
-
-
 # --- Frecuencias ------------------------------------------------------
 
 def test_frecuencia_de_referencia_la4():
