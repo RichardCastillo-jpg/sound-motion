@@ -33,6 +33,11 @@ Thumbs.db
 build/
 dist/
 
+<<<<<<< HEAD
 #Mis archivos
 src/vision/hand_landmarker.task
 src/vision/pose_landmarker_full.task
+=======
+#Mis archvivos
+*.task
+>>>>>>> 781e3e3d2363763cb271312784ac1bec6ddc8efa
