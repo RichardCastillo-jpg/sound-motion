@@ -10,8 +10,8 @@ import numpy as np
 
 FRECUENCIA_MUESTREO = 44100  # muestras por segundo
 DURACION = 1.5            # segundos que suena cada acorde
-VOLUMEN = 2          # entre 0.0 y 1.0, para evitar saturación
-ATAQUE = 0.02                # segundos de subida, evita el "clic" inicial
+VOLUMEN = 2               # entre 0.0 y 1.0: 1.0 es el máximo sin saturar
+ATAQUE = 0.02             # segundos de subida, evita el "clic" inicial
 
 
 def generar_onda(frecuencias, duracion=DURACION, volumen=VOLUMEN,
@@ -29,8 +29,11 @@ def generar_onda(frecuencias, duracion=DURACION, volumen=VOLUMEN,
     for frecuencia in frecuencias:
         onda += np.sin(2 * np.pi * frecuencia * t)
 
-    if len(frecuencias) > 0:
-        onda /= len(frecuencias)  # normaliza para que no sature
+    # Normaliza al pico real de la onda: el resultado nunca supera VOLUMEN,
+    # así que no satura sin importar cuántas notas tenga el acorde.
+    pico = np.max(np.abs(onda))
+    if pico > 0:
+        onda /= pico
 
     # Envolvente: subida rápida y caída exponencial.
     muestras_ataque = max(1, int(ATAQUE * frecuencia_muestreo))
@@ -51,10 +54,16 @@ class Sintetizador:
         Reproduce el acorde indicado. Si había uno sonando, lo reemplaza.
         No bloquea: retorna de inmediato mientras el sonido se reproduce.
 
-        Si el audio no está disponible (por ejemplo, sin dispositivo de
-        salida) avisa una sola vez y el resto del sistema sigue funcionando.
+        Si no hay frecuencias (silencio) corta el sonido que estuviera
+        sonando. Si el audio no está disponible (por ejemplo, sin
+        dispositivo de salida) avisa una sola vez y el resto del sistema
+        sigue funcionando.
         """
-        if not frecuencias or not self._audio_disponible:
+        if not self._audio_disponible:
+            return
+
+        if not frecuencias:
+            self.detener()
             return
 
         try:
