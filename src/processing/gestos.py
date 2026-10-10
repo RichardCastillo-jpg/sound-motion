@@ -93,6 +93,12 @@ def indice_menique_extendido(landmarks):
 
 def mano_extendida(landmarks):
     return configuracion_dedos(landmarks, ["indice", "medio", "anular", "menique", "pulgar"])
+
+def medio_anular_menique(landmarks):
+    return configuracion_dedos(landmarks, ["medio", "anular", "menique"])
+
+def menique(landmarks):
+    return configuracion_dedos(landmarks, ["menique"])
     
 
 def seleccionar_gesto(landmarks):
@@ -110,6 +116,10 @@ def seleccionar_gesto(landmarks):
         return ("indice_medio_anular_menique")
     if indice_menique_extendido(landmarks):
         return ("indice_menique")
+    if medio_anular_menique(landmarks):
+        return ("medio_anular_menique")
+    if menique(landmarks):
+        return ("menique")
  
     return "ninguno"
  
