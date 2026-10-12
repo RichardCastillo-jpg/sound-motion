@@ -6,6 +6,10 @@ from pythonosc import udp_client
 from src.integration.vision_processing import crear_landmarks_pose, crear_landmarks_hand
 from src.processing.gestos import detectar_gesto
 from src.processing.movimiento import ProcesadorMovimiento
+from src.audio.control_acordes import ControlAcordes
+from src.audio.sintetizador import Sintetizador
+
+
 
 osc_client = udp_client.SimpleUDPClient("127.0.0.1", 9000)
 
@@ -58,6 +62,12 @@ last_hand_result = None
 last_timestamp_ms = 0
 
 procesador_movimiento = ProcesadorMovimiento()
+
+ETIQUETA_MANO_NOTAS = "Right"    
+ETIQUETA_MANO_TIPO = "Left"    
+control_acordes = ControlAcordes()
+sintetizador = Sintetizador()
+
 
 posicion_anterior_muneca_derecha = None
 tiempo_anterior_muneca_derecha = None
@@ -281,6 +291,23 @@ with PoseLandmarker.create_from_options(options) as landmarker, HandLandmarker.c
             gesto_left_actual = gesto_left
         if gesto_right is not None:
             gesto_right_actual = gesto_right
+
+        # ---------------------------
+        # ACORDES
+        # ---------------------------
+
+        gestos_actuales = {"Left": gesto_left_actual, "Right": gesto_right_actual}
+        manos_visibles = {"Left": bool(landmarks_left), "Right": bool(landmarks_right)}
+
+        if control_acordes.actualizar(
+            gesto_right_actual,
+            gesto_left_actual,
+            manos_visibles[ETIQUETA_MANO_TIPO]
+        ):
+            
+            sintetizador.reproducir_acorde(control_acordes.obtener_frecuencias())
+
+
 
 
         # ---------------------------
