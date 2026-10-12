@@ -299,13 +299,43 @@ with PoseLandmarker.create_from_options(options) as landmarker, HandLandmarker.c
         gestos_actuales = {"Left": gesto_left_actual, "Right": gesto_right_actual}
         manos_visibles = {"Left": bool(landmarks_left), "Right": bool(landmarks_right)}
 
-        if control_acordes.actualizar(
+        cambio_acorde = control_acordes.actualizar(
             gesto_right_actual,
             gesto_left_actual,
             manos_visibles[ETIQUETA_MANO_TIPO]
-        ):
-            
-            sintetizador.reproducir_acorde(control_acordes.obtener_frecuencias())
+        )
+
+        if cambio_acorde:
+
+            acorde_actual = control_acordes.obtener_acorde()
+
+            print(
+                "ESTADO:",
+                "Left =", gesto_left_actual,
+                "| Right =", gesto_right_actual,
+                "| acorde =", control_acordes.obtener_acorde(),
+                "| nota =", control_acordes.nota_actual,
+                "| tipo =", control_acordes.tipo_acorde
+        )
+
+            sintetizador.reproducir_acorde(
+                control_acordes.obtener_frecuencias()
+            )
+
+            osc_client.send_message(
+                "/music/nota",
+                control_acordes.nota_actual
+            )
+
+            osc_client.send_message(
+                "/music/tipo",
+                control_acordes.tipo_acorde
+            )
+
+            osc_client.send_message(
+                "/music/acorde",
+                acorde_actual
+            )
 
 
 

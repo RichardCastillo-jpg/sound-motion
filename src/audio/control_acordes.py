@@ -81,7 +81,7 @@ class ControlAcordes:
 
     def actualizar(self, gesto_notas, gesto_tipo, mano_tipo_visible):
 
-        nota_anterior = self.nota_actual
+        acorde_anterior = self.obtener_acorde()
 
         nota = self._confirmar("nota", GESTO_A_NOTA.get(gesto_notas))
         if nota is not None:
@@ -95,7 +95,7 @@ class ControlAcordes:
         if tipo is not None:
             self.tipo_acorde = tipo
 
-        return self.nota_actual != nota_anterior
+        return self.obtener_acorde() != acorde_anterior
 
     def obtener_acorde(self):
 
