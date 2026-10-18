@@ -309,15 +309,6 @@ with PoseLandmarker.create_from_options(options) as landmarker, HandLandmarker.c
 
             acorde_actual = control_acordes.obtener_acorde()
 
-            print(
-                "ESTADO:",
-                "Left =", gesto_left_actual,
-                "| Right =", gesto_right_actual,
-                "| acorde =", control_acordes.obtener_acorde(),
-                "| nota =", control_acordes.nota_actual,
-                "| tipo =", control_acordes.tipo_acorde
-        )
-
             sintetizador.reproducir_acorde(
                 control_acordes.obtener_frecuencias()
             )
