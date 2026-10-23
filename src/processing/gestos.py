@@ -101,11 +101,13 @@ def menique(landmarks):
     return configuracion_dedos(landmarks, ["menique"])
     
 
-def seleccionar_gesto(landmarks):
-    if mano_extendida(landmarks):
-        return "mano_extendida"
-    if puno_cerrado(landmarks):
-        return "puño_cerrado"
+def seleccionar_gesto(landmarks, mano):
+    if mano == "Left":
+        if mano_extendida(landmarks):
+            return "mano_extendida"
+        if puno_cerrado(landmarks):
+            return "puño_cerrado"
+
     if indice_extendido (landmarks):
         return ("indice")
     if indice_medio_extendido(landmarks):
@@ -124,7 +126,7 @@ def seleccionar_gesto(landmarks):
     return "ninguno"
  
 def detectar_gesto(landmarks, mano):
-    gesto = seleccionar_gesto(landmarks)
+    gesto = seleccionar_gesto(landmarks, mano)
     global ultimo_gesto
     if (gesto == ultimo_gesto.get(mano)):
         return None
