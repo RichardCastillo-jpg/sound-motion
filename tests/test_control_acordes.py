@@ -21,8 +21,10 @@ MUNECA_XY = (0.5, 0.9)
 
 def _punto_desde_muneca(angulo_grados, distancia):
     angulo = math.radians(angulo_grados)
-    return (MUNECA_XY[0] + distancia * math.cos(angulo),
-            MUNECA_XY[1] - distancia * math.sin(angulo))
+    return (
+        MUNECA_XY[0] + distancia * math.cos(angulo),
+        MUNECA_XY[1] - distancia * math.sin(angulo),
+    )
 
 
 def construir_mano(dedos_extendidos):
@@ -58,15 +60,18 @@ def test_estado_inicial(control):
 
 # --- Mano de notas: gesto -> nota -------------------------------------
 
-@pytest.mark.parametrize("gesto, nota", [
-    ("indice", "C"),
-    ("indice_medio", "D"),
-    ("indice_medio_anular", "E"),
-    ("indice_medio_anular_menique", "F"),
-    ("medio_anular_menique", "G"),
-    ("indice_menique", "A"),
-    ("menique", "B"),
-])
+@pytest.mark.parametrize(
+    "gesto, nota",
+    [
+        ("indice", "C"),
+        ("indice_medio", "D"),
+        ("indice_medio_anular", "E"),
+        ("indice_medio_anular_menique", "F"),
+        ("medio_anular_menique", "G"),
+        ("indice_menique", "A"),
+        ("menique", "B"),
+    ],
+)
 def test_gesto_selecciona_nota(control, gesto, nota):
     assert control.actualizar(gesto, "ninguno", False) is True
     assert control.nota_actual == nota
@@ -94,11 +99,14 @@ def test_sin_gesto_de_nota_pasa_a_silencio(control):
     assert control.obtener_frecuencias() == []
 
 
-@pytest.mark.parametrize("gesto_tipo, visible", [
-    ("mano_extendida", True),   # mayor
-    ("puño_cerrado", True),     # menor
-    (None, False),              # normal
-])
+@pytest.mark.parametrize(
+    "gesto_tipo, visible",
+    [
+        ("mano_extendida", True),  # mayor
+        ("puño_cerrado", True),  # menor
+        (None, False),  # normal
+    ],
+)
 def test_silencio_no_genera_tonos_en_ningun_tipo(control, gesto_tipo, visible):
     # Antes, el silencio con tipo mayor o menor generaba tonos de ~10 Hz.
     control.actualizar("indice", gesto_tipo, visible)
@@ -139,16 +147,20 @@ def test_gesto_de_nota_en_la_mano_de_tipo_no_hace_nada(control):
 
 # --- La mano de tipo NUNCA hace sonar ---------------------------------
 
-def test_la_mano_de_tipo_nunca_hace_sonar(control):
-    control.actualizar("indice", "ninguno", False)   # suena C
-    for gesto_tipo, visible in [("mano_extendida", True),
-                                ("puño_cerrado", True),
-                                ("puño_cerrado", False),
-                                ("mano_extendida", True)]:
-        # El acorde cambia (C, C mayor, C menor...) pero nunca retorna True.
-        assert control.actualizar("indice", gesto_tipo, visible) is False
+def test_cambiar_tipo_actualiza_el_acorde(control):
+    control.actualizar("indice", "ninguno", False)   # C
+
+    assert control.actualizar("indice", "mano_extendida", True) is True
     assert control.obtener_acorde() == "C mayor"
 
+    assert control.actualizar("indice", "puño_cerrado", True) is True
+    assert control.obtener_acorde() == "C menor"
+
+    assert control.actualizar("indice", "puño_cerrado", False) is True
+    assert control.obtener_acorde() == "C"
+
+    assert control.actualizar("indice", "mano_extendida", True) is True
+    assert control.obtener_acorde() == "C mayor"
 
 GESTOS_MANO_IZQUIERDA = [
     "mano_extendida", "puño_cerrado", "indice", "indice_medio",
@@ -157,13 +169,27 @@ GESTOS_MANO_IZQUIERDA = [
 ]
 
 
-@pytest.mark.parametrize("gesto_notas", ["ninguno", "indice"])  # sin gesto / sosteniendo C
+@pytest.mark.parametrize("gesto_notas", ["ninguno", "indice"])
 @pytest.mark.parametrize("gesto_tipo", GESTOS_MANO_IZQUIERDA)
 @pytest.mark.parametrize("mano_tipo_visible", [True, False])
-def test_ningun_gesto_de_la_mano_de_tipo_hace_sonar(control, gesto_notas,
-                                                    gesto_tipo, mano_tipo_visible):
-    control.actualizar(gesto_notas, None, False)   # estado previo de la mano de notas
-    assert control.actualizar(gesto_notas, gesto_tipo, mano_tipo_visible) is False
+def test_cambios_de_tipo_actualizan_el_acorde_cuando_corresponde(
+    control, gesto_notas, gesto_tipo, mano_tipo_visible
+):
+    control.actualizar(gesto_notas, None, False)
+
+    cambio = control.actualizar(
+        gesto_notas,
+        gesto_tipo,
+        mano_tipo_visible
+    )
+
+    cambio_esperado = (
+        gesto_notas == "indice"
+        and mano_tipo_visible
+        and gesto_tipo in ["mano_extendida", "puño_cerrado"]
+    )
+
+    assert cambio is cambio_esperado
 
 
 def test_el_tipo_se_aplica_en_la_siguiente_nota(control):
@@ -266,11 +292,14 @@ def test_el_volumen_configurado_no_supera_1():
     assert 0 < VOLUMEN <= 1.0
 
 
-@pytest.mark.parametrize("gesto_tipo, visible", [
-    ("mano_extendida", True),   # acorde mayor (3 notas)
-    ("puño_cerrado", True),     # acorde menor (3 notas)
-    (None, False),              # nota sola
-])
+@pytest.mark.parametrize(
+    "gesto_tipo, visible",
+    [
+        ("mano_extendida", True),  # acorde mayor (3 notas)
+        ("puño_cerrado", True),  # acorde menor (3 notas)
+        (None, False),  # nota sola
+    ],
+)
 def test_onda_no_satura_y_tiene_senal(control, gesto_tipo, visible):
     control.actualizar("indice", gesto_tipo, visible)
     onda = generar_onda(control.obtener_frecuencias())
@@ -324,36 +353,43 @@ class Simulador:
         return sonaron
 
 
-@pytest.mark.parametrize("dedos, nota", [
-    (["indice"], "C"),
-    (["indice", "medio"], "D"),
-    (["indice", "medio", "anular"], "E"),
-    (["indice", "medio", "anular", "menique"], "F"),
-    (["medio", "anular", "menique"], "G"),
-    (["indice", "menique"], "A"),
-    (["menique"], "B"),
-])
+@pytest.mark.parametrize(
+    "dedos, nota",
+    [
+        (["indice"], "C"),
+        (["indice", "medio"], "D"),
+        (["indice", "medio", "anular"], "E"),
+        (["indice", "medio", "anular", "menique"], "F"),
+        (["medio", "anular", "menique"], "G"),
+        (["indice", "menique"], "A"),
+        (["menique"], "B"),
+    ],
+)
 def test_los_siete_gestos_reales_producen_su_nota(dedos, nota):
     sim = Simulador()
     assert sim.fotogramas(3, construir_mano(dedos), SIN_MANO) == [nota]
 
 
-def test_flujo_completo_solo_suena_con_la_mano_de_notas():
+def test_flujo_completo_actualiza_nota_y_tipo():
     sim = Simulador()
     indice = construir_mano(["indice"])
     indice_medio = construir_mano(["indice", "medio"])
 
     # Solo la mano de notas: suena C.
     assert sim.fotogramas(8, indice, SIN_MANO) == ["C"]
-    # La mano de tipo cambia a mayor y luego a menor: NO suena nada.
-    assert sim.fotogramas(8, indice, MANO_ABIERTA) == []
+
+    # Cambiar el tipo también actualiza el acorde.
+    assert sim.fotogramas(8, indice, MANO_ABIERTA) == ["C mayor"]
     assert sim.control.obtener_acorde() == "C mayor"
-    assert sim.fotogramas(8, indice, MANO_PUNO) == []
+
+    assert sim.fotogramas(8, indice, MANO_PUNO) == ["C menor"]
     assert sim.control.obtener_acorde() == "C menor"
-    # Nota nueva: suena con el tipo que ya estaba elegido.
+
+    # Nota nueva: conserva el tipo seleccionado.
     assert sim.fotogramas(8, indice_medio, MANO_PUNO) == ["D menor"]
-    # La mano de tipo desaparece: vuelve a normal y NO suena nada.
-    assert sim.fotogramas(8, indice_medio, SIN_MANO) == []
+
+    # Si desaparece la mano de tipo, vuelve al acorde normal.
+    assert sim.fotogramas(8, indice_medio, SIN_MANO) == ["D"]
     assert sim.control.obtener_acorde() == "D"
 
 
